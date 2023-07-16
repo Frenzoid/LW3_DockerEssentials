@@ -10,7 +10,7 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 
 
-// --- Constants
+// --- Configuration variables.
 // Address of the MQTT broker, we know it will be localhost because we are running containers in our computer.
 const STREAMRADDRESS = "localhost";
 
@@ -21,11 +21,11 @@ const STREAMRAPIKEY = "NmZkOTliZjQ5ZGMxNDVmN2I0NzJmZWE1YzIwY2Q4ZDI";
 const STREAMRTOPIC = "0x7030f4D0dC092449E4868c8DDc9bc00a14C9f561/streamr_chat";
 
 // Database credentials and table name, we know the database will have these credentials because we specified them in the dockerfile.
+const DBADDRESS = "localhost";
+const DBPORT = 5432;
 const DBNAME = "chatdb";
 const DBUSER = "root";
 const DBPASSWORD = "root";
-const DBADDRESS = "localhost";
-const DBPORT = 5432;
 
 
 
@@ -98,7 +98,19 @@ client.on('connect', async () => {
   }
 });
 
+// When the client receives a message from the topic...
+client.on('message', async (topic, payload) => {
+
+  // The payload is a JSON string, so we need to parse it to an object, and then get the message object from it.
+  const { message } = JSON.parse(payload);
+
+  // Create a new message in the database. We can directly pass the "message" object since its fields ( sender, text, date ) are the same as the table columns defined in the Model.
+  const dbmessage = await Messages.create(message);
+  console.log(dbmessage.dataValues);
+});
+
 // Create API Endpoint with a paramter for the sender of the messages.
+// This means that if you search http://localhost:3000/messages/frenzoid you will get all the messages sent by "frenzoid".
 app.get('/messages/:sender', async (req, res) => {
 
   // Get the sender from the request parameters.
@@ -109,15 +121,4 @@ app.get('/messages/:sender', async (req, res) => {
 
   // Send the messages as a response.
   res.json(messages);
-});
-
-// When the client receives a message from the topic...
-client.on('message', async (topic, payload) => {
-
-  // The payload is a JSON string, so we need to parse it to an object, and then get the message object from it.
-  const { message } = JSON.parse(payload);
-
-  // Create a new message in the database. We can directly pass the "message" object since its fields ( sender, text, date ) are the same as the table columns defined in the Model.
-  const dbmessage = await Messages.create(message);
-  console.log(dbmessage.dataValues);
 });

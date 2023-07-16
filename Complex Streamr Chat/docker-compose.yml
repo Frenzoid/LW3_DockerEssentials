@@ -1,0 +1,41 @@
+# Maintainer: Frenzoid
+version: '3'
+services:
+
+  # The following is equivalent to: docker run -v ./streamr:/home/streamr/.streamr -p 1883:1883 streamr/broker-node:latest
+  streamrnode:
+    container_name: 'streamr_node'
+    image: "streamr/broker-node:latest"
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./streamr:/home/streamr/.streamr
+
+  # The following runs a PostgreSQL database server, more info regarding arguments:
+  # https://hub.docker.com/_/postgres
+  postgres:
+    image: postgres
+    container_name: 'postgres_database'
+    restart: always
+    environment:
+
+      # Database Credentials, we use "root" ones for simplicity, but if we want to change the credentials we can do it using the env vars.
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+
+      # Default Database Name, when the container starts for the first time, it will create a database with this name.
+      POSTGRES_DB: chatdb
+
+    ports:
+      - 5432:5432
+
+  # The following runs an Adminer databse web interface for the PostgreSQL database server, more info regarding arguments:
+  # https://hub.docker.com/_/adminer
+  adminer:
+    image: adminer
+    container_name: 'adminer_interface'
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres

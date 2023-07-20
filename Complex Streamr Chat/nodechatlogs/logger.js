@@ -1,31 +1,36 @@
 // @author: Frenzoid
 // ---------------------------------------------------------------------
-// This is a service that reads from a MQTT topic and saves the messages in a database.
+// This is a service that reads from a MQTT topic saves the messages in a database and exposes an API endpoint.
 
 // --- Imports
 // Import libraries
+// Importing MQTT library used to connect to Streamr broker.
 const mqtt = require('mqtt');
+
+// Importing express library used to create the API Rest.
 const app = require('express')()
+
+// Importing Sequelize library used to connect and manage the database.
 const { Sequelize, DataTypes } = require("sequelize");
 
 
 
-// --- Configuration variables.
-// Address of the MQTT broker, we know it will be localhost because we are running containers in our computer.
-const STREAMRADDRESS = "localhost";
+// --- Environment / Config variables.
+// Address of the MQTT broker, we know the address will be localhost because we are running the container in our computer locally.
+const STREAMRADDRESS = process.env.STREAMRADDRESS;
 
-// Port of the MQTT broker, we know it will be 1883 because we specified it in the dockerfile.
-const STREAMRPORT = 1883;
-const STREAMRUSER = "frenzoid";
-const STREAMRAPIKEY = "NmZkOTliZjQ5ZGMxNDVmN2I0NzJmZWE1YzIwY2Q4ZDI";
-const STREAMRTOPIC = "0x7030f4D0dC092449E4868c8DDc9bc00a14C9f561/streamr_chat";
+// Port of the MQTT broker, we know it will be 1883 because we have it specified it in the docker compose file.
+const STREAMRPORT = Number(process.env.STREAMRPORT);
+const STREAMRUSER = process.env.STREAMRUSER;
+const STREAMRAPIKEY = process.env.STREAMRAPIKEY;
+const STREAMRTOPIC = process.env.STREAMRTOPIC;
 
-// Database credentials and table name, we know the database will have these credentials because we specified them in the dockerfile.
-const DBADDRESS = "localhost";
-const DBPORT = 5432;
-const DBNAME = "chatdb";
-const DBUSER = "root";
-const DBPASSWORD = "root";
+// Database credentials and table name, we know the database will have these credentials because we will specify them in the docker compose file ( SPOILERS :D ).
+const DBADDRESS = process.env.DBADDRESS;
+const DBPORT = Number(process.env.DBPORT);
+const DBNAME = process.env.DBNAME;
+const DBUSER = process.env.DBUSER;
+const DBPASSWORD = process.env.DBPASSWORD;
 
 
 
@@ -36,17 +41,17 @@ const DBPASSWORD = "root";
 const client = mqtt.connect(`mqtt://${STREAMRUSER}:${STREAMRAPIKEY}@${STREAMRADDRESS}:${STREAMRPORT}`);
 console.log("Connecting to MQTT broker...");
 
-// Connect to the database
+// Create a database client with the address and credentials.
 // The connection string syntax is as follows: protocol://username:address@host:port/database
 // The username, password and dbname must be the same as the ones you used to create the database ( values used in env variables on the dockerfile postgre service ).
-// We also disable logging because it's not necessary, unless we want to see the SQL queries being executed :)
+// We also disable logging because it's not necessary, unless we want to see the SQL queries being executed in our console output :)
 const sequelize = new Sequelize(`postgres://${DBUSER}:${DBPASSWORD}@${DBADDRESS}:${DBPORT}/${DBNAME}`, { logging: false });
 console.log("Connecting to PostgreSQL database...");
 
 
 
 // --- Database Model
-// Define the model for a table in the database, this table will hold the messages.
+// Here we define the model for a table in the database, this table will hold the messages received from the topic.
 
 const Messages = sequelize.define("Messages", {
 
@@ -66,7 +71,7 @@ const Messages = sequelize.define("Messages", {
   date: {
     type: DataTypes.STRING,
     allowNull: false
-  }
+  },
 });
 
 
@@ -79,6 +84,7 @@ client.on('connect', async () => {
   console.log("Connected to MQTT broker!")
   client.subscribe(STREAMRTOPIC);
 
+  // Database Logic...
   try {
     // Authenticate to the database.
     await sequelize.authenticate();
@@ -86,9 +92,9 @@ client.on('connect', async () => {
 
     // And then sync the Messages table, this will create the Messages table if it doesn't already exist in the database.
     await Messages.sync();
-    console.log("Synced Messages table in database:", DBNAME);
+    console.log("Created Messages table in database:", DBNAME);
 
-    // Start listening on port 3000.
+    // Start the API Rest listening on port 3000.
     app.listen(3000, () => {
       console.log("API listening on port 3000");
     });
@@ -101,11 +107,16 @@ client.on('connect', async () => {
 // When the client receives a message from the topic...
 client.on('message', async (topic, payload) => {
 
-  // The payload is a JSON string, so we need to parse it to an object, and then get the message object from it.
+  // T// The payload ( message received from the topic ) will be a JSON string, so we need to parse it to an object, and then get the message object from it.
   const { message } = JSON.parse(payload);
 
-  // Create a new message in the database. We can directly pass the "message" object since its fields ( sender, text, date ) are the same as the table columns defined in the Model.
+  // Create a new message in the database. We can directly pass the "message" object since its fields ( sender, text, date ) have the same variable names as the table columns defined in the Model. Returns the object stored in the database.
   const dbmessage = await Messages.create(message);
+
+  // The line above is equivalent to the line below.
+  // const dbmessage = await Messages.create({sender: message.sender, text: message.text, date: message.date }); 
+
+  // Console log the message now stored in the db.
   console.log(dbmessage.dataValues);
 });
 

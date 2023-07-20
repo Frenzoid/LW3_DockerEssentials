@@ -69,7 +69,7 @@ client.on('message', (topic, payload) => {
 
 
 // --- Functions
-// Function to send a message to the topic
+// Function to publish a message to the topic
 function sendMessage(text) {
   let message =
   {
@@ -82,7 +82,7 @@ function sendMessage(text) {
   client.publish(TOPIC, JSON.stringify({ message }));
 }
 
-// Loop to read user input and send it to the topic
+// Loop to read user input and publish it to the topic
 function readInput() {
   readline.question("", (message) => {
     sendMessage(message);

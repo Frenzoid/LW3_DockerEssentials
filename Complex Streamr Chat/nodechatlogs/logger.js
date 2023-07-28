@@ -32,19 +32,6 @@ const DBNAME = process.env.DBNAME;
 const DBUSER = process.env.DBUSER;
 const DBPASSWORD = process.env.DBPASSWORD;
 
-console.log("Environment variables loaded: ", {
-  STREAMRADDRESS,
-  STREAMRPORT,
-  STREAMRUSER,
-  STREAMRAPIKEY,
-  STREAMRTOPIC,
-  DBADDRESS,
-  DBPORT,
-  DBNAME,
-  DBUSER,
-  DBPASSWORD
-});
-
 
 
 // --- Main

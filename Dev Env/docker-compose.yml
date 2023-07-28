@@ -1,0 +1,10 @@
+# Maintainer: Frenzoid
+version: '3'
+services:
+
+  mypyapp:
+
+    build: ./
+    container_name: 'python_devenv'
+    volumes:
+      - ./hello.py:/usr/src/app/hello.py
